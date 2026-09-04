@@ -82,6 +82,17 @@ body {
 .dashboard { display: none; }
 .dashboard.active { display: block; }
 
+.rate-limit {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 20px;
+  padding: 8px 16px; background: var(--bg-secondary); border-radius: 20px;
+  border: 1px solid var(--border); width: fit-content; margin-left: auto; margin-right: auto;
+}
+.rate-limit-dot { width: 8px; height: 8px; border-radius: 50%; }
+.rate-limit-dot.good { background: var(--green); }
+.rate-limit-dot.warn { background: var(--orange); }
+.rate-limit-dot.low { background: var(--red); }
+
 .profile-card {
   display: flex; gap: 24px; align-items: flex-start;
   background: var(--bg-secondary); border: 1px solid var(--border);
@@ -93,12 +104,13 @@ body {
 }
 .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .profile-info { flex: 1; min-width: 0; }
-.profile-name span:first-child { font-size: 1.5rem; font-weight: 700; }
-.profile-login { color: var(--text-secondary); font-size: 1.1rem; }
+.profile-name { font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.profile-login { color: var(--text-secondary); font-size: 1.1rem; font-weight: 400; }
 .profile-bio { margin-top: 8px; color: var(--text-secondary); font-size: 0.9rem; }
 .profile-stats { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; }
 .profile-stat { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; color: var(--text-secondary); }
 .profile-stat strong { color: var(--text-primary); font-weight: 600; }
+.profile-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-size: 0.82rem; color: var(--text-secondary); }
 
 .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
 .stat-card {
@@ -109,6 +121,8 @@ body {
 .stat-card-value { font-size: 1.6rem; font-weight: 700; }
 .stat-card-label { font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; }
 
+.section-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 14px; }
+
 .repo-list { display: flex; flex-direction: column; gap: 10px; }
 .repo-item {
   background: var(--bg-secondary); border: 1px solid var(--border);
@@ -118,9 +132,15 @@ body {
 .repo-item:hover { border-color: var(--accent); }
 .repo-name { font-size: 0.95rem; font-weight: 600; color: var(--text-link); text-decoration: none; }
 .repo-name:hover { text-decoration: underline; }
-.repo-desc { margin-top: 6px; font-size: 0.84rem; color: var(--text-secondary); }
+.repo-desc { margin-top: 6px; font-size: 0.84rem; color: var(--text-secondary); overflow-wrap: break-word; }
 .repo-meta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 0.78rem; color: var(--text-secondary); }
 .repo-lang-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.repo-topics { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.repo-topic {
+  font-size: 0.72rem; padding: 3px 10px; border-radius: 14px;
+  background: var(--accent-dim); color: var(--accent); text-decoration: none;
+}
+.repo-topic:hover { background: rgba(88,166,255,0.25); }
 
 .footer {
   text-align: center; padding: 32px 0 16px; font-size: 0.8rem;
@@ -132,14 +152,17 @@ body {
   .container { padding: 16px 14px 40px; }
   .header h1 { font-size: 1.4rem; }
   .profile-card { flex-direction: column; align-items: center; text-align: center; padding: 20px; }
-  .profile-stats { justify-content: center; }
+  .profile-stats, .profile-meta { justify-content: center; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .stat-card { padding: 14px 10px; }
   .stat-card-value { font-size: 1.3rem; }
+  .search-box { padding: 5px 5px 5px 14px; }
+  .search-box button { padding: 8px 16px; font-size: 0.82rem; }
 }
 </style>
 </head>
 <body>
+
 <div class="container">
   <header class="header">
     <h1>🐙 GitHub Profile Viewer</h1>
@@ -148,7 +171,7 @@ body {
 
   <section class="search-section">
     <div class="search-box">
-      <input type="text" id="usernameInput" placeholder="Enter GitHub username, e.g. torvalds..." autocomplete="off">
+      <input type="text" id="usernameInput" placeholder="Enter GitHub username, e.g. torvalds…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       <button id="searchBtn" type="button">🔍 Search</button>
     </div>
     <div class="search-hint">
@@ -164,30 +187,55 @@ body {
     <h3>Enter a username to start</h3>
     <p>View any GitHub user's public profile, repositories, and language breakdown</p>
   </div>
+
   <div id="stateLoading" class="state">
     <div class="spinner"></div>
-    <h3>Loading data...</h3>
+    <h3>Loading data…</h3>
     <p>Fetching from GitHub REST API</p>
   </div>
+
   <div id="stateError" class="state">
-    <div class="state-icon">⚠️</div>
+    <div class="state-icon" id="errorIcon">⚠️</div>
     <h3 id="errorTitle">Error</h3>
     <p id="errorMsg"></p>
   </div>
 
+  <div id="stateEmpty" class="state">
+    <div class="state-icon">📭</div>
+    <h3>No public repositories</h3>
+    <p>This user has no public repos yet</p>
+  </div>
+
   <div id="dashboard" class="dashboard">
+    <div class="rate-limit" id="rateLimit" style="display:none">
+      <span class="rate-limit-dot good" id="rateDot"></span>
+      <span id="rateText"></span>
+    </div>
     <div class="profile-card" id="profileCard"></div>
     <div class="stats-grid" id="statsGrid"></div>
+    <div class="section-title">📦 Repositories</div>
     <div class="repo-list" id="repoList"></div>
+    <div id="languagesSection" style="display:none"></div>
   </div>
 
   <footer class="footer">
-    <p>Data from <a href="https://docs.github.com/en/rest" target="_blank" rel="noopener">GitHub REST API</a> (no auth, 60 req/hr)</p>
+    <p>Data from <a href="https://docs.github.com/en/rest" target="_blank" rel="noopener">GitHub REST API</a> (no auth, 60 req/hr) · Rate limit status shown after each search</p>
     <p>Built with ❤️ · 2025</p>
   </footer>
 </div>
 
 <script>
+var LANG_COLORS = {
+  JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572A5',
+  Java: '#b07219', Go: '#00ADD8', Rust: '#dea584', Ruby: '#701516',
+  'C++': '#f34b7d', C: '#555555', 'C#': '#178600', PHP: '#4F5D95',
+  Swift: '#F05138', Kotlin: '#A97BFF', Dart: '#00B4AB',
+  HTML: '#e34c26', CSS: '#563d7c', SCSS: '#c6538c',
+  Shell: '#89e051', Vue: '#41b883', Lua: '#000080',
+  Jupyter: '#DA5B0B', R: '#198CE7', Scala: '#c22d40',
+  default: '#8b949e'
+};
+
 var $ = function(s) { return document.querySelector(s); };
 var $$ = function(s) { return document.querySelectorAll(s); };
 
@@ -196,27 +244,29 @@ var searchBtn = $('#searchBtn');
 var stateInitial = $('#stateInitial');
 var stateLoading = $('#stateLoading');
 var stateError = $('#stateError');
+var stateEmpty = $('#stateEmpty');
+var errorIcon = $('#errorIcon');
 var errorTitle = $('#errorTitle');
 var errorMsg = $('#errorMsg');
 var dashboard = $('#dashboard');
+var rateLimit = $('#rateLimit');
+var rateDot = $('#rateDot');
+var rateText = $('#rateText');
 var profileCard = $('#profileCard');
 var statsGrid = $('#statsGrid');
 var repoList = $('#repoList');
 
-var LANG_COLORS = {
-  JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572A5',
-  Java: '#b07219', Go: '#00ADD8', Rust: '#dea584', Ruby: '#701516',
-  'C++': '#f34b7d', C: '#555555', 'C#': '#178600', PHP: '#4F5D95',
-  Swift: '#F05138', Kotlin: '#A97BFF', Dart: '#00B4AB',
-  HTML: '#e34c26', CSS: '#563d7c', Vue: '#41b883',
-  Shell: '#89e051', Jupyter: '#DA5B0B', R: '#198CE7',
-  default: '#8b949e'
-};
+var currentUsername = '';
+var allRepos = [];
+var rateRemaining = 60;
 
 function showState(state) {
-  [stateInitial, stateLoading, stateError, dashboard].forEach(function(el) { el.classList.remove('active'); });
-  var target = document.getElementById(state === 'dashboard' ? 'dashboard' : 'state' + state.charAt(0).toUpperCase() + state.slice(1));
-  target.classList.add('active');
+  [stateInitial, stateLoading, stateError, stateEmpty, dashboard].forEach(function(el) { el.classList.remove('active'); });
+  if (state === 'dashboard') {
+    dashboard.classList.add('active');
+  } else {
+    document.getElementById('state' + state.charAt(0).toUpperCase() + state.slice(1)).classList.add('active');
+  }
 }
 
 function formatNumber(n) {
@@ -226,77 +276,194 @@ function formatNumber(n) {
   return n.toString();
 }
 
+function timeAgo(dateStr) {
+  var now = new Date();
+  var date = new Date(dateStr);
+  var diffDays = Math.floor((now - date) / 86400000);
+  if (diffDays < 1) return 'today';
+  if (diffDays < 2) return 'yesterday';
+  if (diffDays < 30) return diffDays + ' days ago';
+  if (diffDays < 365) return Math.floor(diffDays / 30) + ' months ago';
+  return Math.floor(diffDays / 365) + ' years ago';
+}
+
 function escapeHtml(str) {
   var div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
 }
 
-async function doSearch(username) {
+// === API with rate limit tracking ===
+function updateRateLimit(headers) {
+  var remaining = headers.get('X-RateLimit-Remaining');
+  var limit = headers.get('X-RateLimit-Limit');
+  var reset = headers.get('X-RateLimit-Reset');
+  if (remaining !== null && limit !== null) {
+    rateRemaining = parseInt(remaining, 10);
+    var resetDate = reset ? new Date(parseInt(reset, 10) * 1000) : null;
+    var resetStr = resetDate ? resetDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '?';
+    rateLimit.style.display = 'flex';
+    rateText.textContent = 'API: ' + remaining + '/' + limit + ' remaining · resets at ' + resetStr;
+    rateDot.classList.remove('good', 'warn', 'low');
+    if (rateRemaining > 20) rateDot.classList.add('good');
+    else if (rateRemaining > 5) rateDot.classList.add('warn');
+    else rateDot.classList.add('low');
+  }
+}
+
+function fetchGitHub(url) {
+  return fetch(url, { headers: { Accept: 'application/vnd.github.v3+json' } }).then(function(resp) {
+    updateRateLimit(resp.headers);
+    if (!resp.ok) {
+      var err = new Error('HTTP ' + resp.status);
+      err.status = resp.status;
+      err.rateLimitRemaining = rateRemaining;
+      throw err;
+    }
+    return resp.json();
+  });
+}
+
+function fetchUser(username) {
+  return fetchGitHub('https://api.github.com/users/' + username);
+}
+
+function fetchRepos(username) {
+  return fetchGitHub('https://api.github.com/users/' + username + '/repos?per_page=100&sort=updated');
+}
+
+// === Search with comprehensive errors ===
+function doSearch(username) {
   username = username.trim();
   if (!username) return;
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9-]{0,38}$/.test(username)) {
+    showError('Please enter a valid GitHub username (alphanumeric + hyphens, max 39 chars).', 'Invalid Username', '❗');
+    return;
+  }
 
+  currentUsername = username;
   dashboard.classList.remove('active');
   showState('loading');
   searchBtn.disabled = true;
   usernameInput.disabled = true;
 
-  try {
-    var userResp = await fetch('https://api.github.com/users/' + username);
-    if (!userResp.ok) throw new Error('HTTP ' + userResp.status);
-    var user = await userResp.json();
+  Promise.all([fetchUser(username), fetchRepos(username)]).then(function(results) {
+    var user = results[0];
+    var repos = results[1];
 
-    var reposResp = await fetch('https://api.github.com/users/' + username + '/repos?per_page=100&sort=updated');
-    if (!reposResp.ok) throw new Error('HTTP ' + reposResp.status);
-    var repos = await reposResp.json();
+    if (!Array.isArray(repos)) throw new Error('Unexpected API response');
 
-    if (!Array.isArray(repos)) throw new Error('Invalid response');
+    if (repos.length === 0 && user.public_repos === 0) {
+      showState('empty');
+      return;
+    }
 
-    profileCard.innerHTML =
-      '<div class="profile-avatar"><img src="' + escapeHtml(user.avatar_url) + '&s=200" alt="' + escapeHtml(user.login) + '" loading="lazy"></div>' +
-      '<div class="profile-info">' +
-        '<div class="profile-name"><span>' + escapeHtml(user.name || user.login) + '</span> <span class="profile-login">@' + escapeHtml(user.login) + '</span></div>' +
-        (user.bio ? '<div class="profile-bio">' + escapeHtml(user.bio) + '</div>' : '') +
-        '<div class="profile-stats">' +
-          '<span class="profile-stat"><strong>' + formatNumber(user.public_repos) + '</strong> repos</span>' +
-          '<span class="profile-stat"><strong>' + formatNumber(user.followers) + '</strong> followers</span>' +
-          '<span class="profile-stat"><strong>' + formatNumber(user.following) + '</strong> following</span>' +
-        '</div>' +
-      '</div>';
-
-    var totalStars = repos.reduce(function(s, r) { return s + r.stargazers_count; }, 0);
-    var langs = new Set(repos.filter(function(r) { return r.language; }).map(function(r) { return r.language; }));
-    statsGrid.innerHTML =
-      '<div class="stat-card"><div class="stat-card-icon">⭐</div><div class="stat-card-value">' + formatNumber(totalStars) + '</div><div class="stat-card-label">Total Stars</div></div>' +
-      '<div class="stat-card"><div class="stat-card-icon">📦</div><div class="stat-card-value">' + repos.length + '</div><div class="stat-card-label">Repos Loaded</div></div>' +
-      '<div class="stat-card"><div class="stat-card-icon">🔀</div><div class="stat-card-value">' + formatNumber(repos.reduce(function(s, r) { return s + r.forks_count; }, 0)) + '</div><div class="stat-card-label">Total Forks</div></div>' +
-      '<div class="stat-card"><div class="stat-card-icon">🌈</div><div class="stat-card-value">' + langs.size + '</div><div class="stat-card-label">Languages</div></div>';
-
-    repoList.innerHTML = repos.map(function(r) {
-      return '<div class="repo-item">' +
-        '<a class="repo-name" href="' + escapeHtml(r.html_url) + '" target="_blank" rel="noopener">' + escapeHtml(r.name) + '</a>' +
-        (r.description ? '<div class="repo-desc">' + escapeHtml(r.description) + '</div>' : '') +
-        '<div class="repo-meta">' +
-          (r.language ? '<span><span class="repo-lang-dot" style="background:' + (LANG_COLORS[r.language] || LANG_COLORS.default) + '"></span> ' + escapeHtml(r.language) + '</span>' : '') +
-          '<span>⭐ ' + formatNumber(r.stargazers_count) + '</span>' +
-          '<span>🔀 ' + formatNumber(r.forks_count) + '</span>' +
-          '<span>Updated ' + new Date(r.updated_at).toLocaleDateString() + '</span>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-
+    allRepos = repos;
+    renderDashboard(user, repos);
     showState('dashboard');
     dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } catch (err) {
-    errorTitle.textContent = err.message.indexOf('404') !== -1 ? 'User not found' : 'Request failed';
-    errorMsg.textContent = err.message;
-    showState('error');
-  } finally {
+  }).catch(function(err) {
+    console.error('Search error:', err);
+    if (err.status === 404) {
+      showError('User <strong>' + escapeHtml(username) + '</strong> does not exist on GitHub.', 'User Not Found', '🔍');
+    } else if (err.status === 403 && rateRemaining === 0) {
+      showError('GitHub API rate limit reached (60 req/hr for unauthenticated requests). Please wait and try again later.', 'Rate Limited', '⏳');
+    } else {
+      showError('Request failed: ' + escapeHtml(err.message) + '. Please try again later.', 'Request Failed', '⚠️');
+    }
+  }).then(function() {
     searchBtn.disabled = false;
     usernameInput.disabled = false;
-  }
+  });
 }
 
+function showError(msg, title, icon) {
+  errorIcon.textContent = icon || '⚠️';
+  errorTitle.textContent = title || 'Error';
+  errorMsg.innerHTML = msg;
+  showState('error');
+}
+
+// === Render ===
+function renderDashboard(user, repos) {
+  renderProfileCard(user);
+  renderStatsGrid(user, repos);
+  renderRepoList(repos);
+}
+
+function renderProfileCard(user) {
+  var blogHtml = '';
+  if (user.blog) {
+    var url = user.blog.indexOf('http') === 0 ? user.blog : 'https://' + user.blog;
+    blogHtml = '<span>🔗 <a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" style="color:var(--text-link);text-decoration:none">' + escapeHtml(user.blog) + '</a></span>';
+  }
+
+  profileCard.innerHTML =
+    '<div class="profile-avatar">' +
+      '<img src="' + escapeHtml(user.avatar_url) + '&s=200" alt="' + escapeHtml(user.login) + '" loading="lazy" onerror="this.style.display=\'none\'">' +
+    '</div>' +
+    '<div class="profile-info">' +
+      '<div class="profile-name">' +
+        '<span>' + escapeHtml(user.name || user.login) + '</span>' +
+        '<span class="profile-login">@' + escapeHtml(user.login) + '</span>' +
+        (user.type === 'Organization' ? '<span style="font-size:0.7rem;padding:2px 8px;border-radius:12px;border:1px solid var(--border);color:var(--orange)">ORG</span>' : '') +
+      '</div>' +
+      (user.bio ? '<div class="profile-bio">' + escapeHtml(user.bio) + '</div>' : '') +
+      '<div class="profile-stats">' +
+        '<span class="profile-stat">📦 <strong>' + formatNumber(user.public_repos) + '</strong> repos</span>' +
+        '<span class="profile-stat">👥 <strong>' + formatNumber(user.followers) + '</strong> followers</span>' +
+        '<span class="profile-stat">👤 <strong>' + formatNumber(user.following) + '</strong> following</span>' +
+      '</div>' +
+      '<div class="profile-meta">' +
+        (user.location ? '<span>📍 ' + escapeHtml(user.location) + '</span>' : '') +
+        (user.company ? '<span>🏢 ' + escapeHtml(user.company) + '</span>' : '') +
+        blogHtml +
+        '<span>📅 Joined ' + new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + '</span>' +
+      '</div>' +
+      '<a href="' + escapeHtml(user.html_url) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;color:var(--text-link);font-size:0.85rem;text-decoration:none;font-weight:500">🔗 View on GitHub</a>' +
+    '</div>';
+}
+
+function renderStatsGrid(user, repos) {
+  var totalStars = repos.reduce(function(s, r) { return s + r.stargazers_count; }, 0);
+  var totalForks = repos.reduce(function(s, r) { return s + r.forks_count; }, 0);
+  var accountAge = Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000 / 365.25);
+
+  statsGrid.innerHTML =
+    '<div class="stat-card"><div class="stat-card-icon">⭐</div><div class="stat-card-value">' + formatNumber(totalStars) + '</div><div class="stat-card-label">Total Stars</div></div>' +
+    '<div class="stat-card"><div class="stat-card-icon">📦</div><div class="stat-card-value">' + repos.length + '<span style="font-size:0.7rem;color:var(--text-secondary);font-weight:400">/' + user.public_repos + '</span></div><div class="stat-card-label">Loaded / All Repos</div></div>' +
+    '<div class="stat-card"><div class="stat-card-icon">🔀</div><div class="stat-card-value">' + formatNumber(totalForks) + '</div><div class="stat-card-label">Total Forks</div></div>' +
+    '<div class="stat-card"><div class="stat-card-icon">🎂</div><div class="stat-card-value">' + accountAge + '</div><div class="stat-card-label">Years on GitHub</div></div>';
+}
+
+function renderRepoList(repos) {
+  if (!repos.length) {
+    repoList.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-secondary)">No repositories found</div>';
+    return;
+  }
+
+  repoList.innerHTML = repos.map(function(r) {
+    return '<div class="repo-item">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+        '<a class="repo-name" href="' + escapeHtml(r.html_url) + '" target="_blank" rel="noopener">' + escapeHtml(r.name) + '</a>' +
+        '<span style="font-size:0.7rem;padding:2px 8px;border-radius:12px;border:1px solid var(--border);color:var(--text-secondary);text-transform:uppercase">' + (r.private ? 'Private' : 'Public') + '</span>' +
+        (r.fork ? '<span style="font-size:0.7rem;color:var(--text-secondary)">🔀 Forked</span>' : '') +
+        (r.archived ? '<span style="font-size:0.7rem;color:var(--orange)">📦 Archived</span>' : '') +
+      '</div>' +
+      (r.description ? '<div class="repo-desc">' + escapeHtml(r.description) + '</div>' : '') +
+      '<div class="repo-meta">' +
+        (r.language ? '<span><span class="repo-lang-dot" style="background:' + (LANG_COLORS[r.language] || LANG_COLORS.default) + '"></span> ' + escapeHtml(r.language) + '</span>' : '') +
+        '<span>⭐ ' + formatNumber(r.stargazers_count) + '</span>' +
+        '<span>🔀 ' + formatNumber(r.forks_count) + '</span>' +
+        '<span>🕐 Updated ' + timeAgo(r.updated_at) + '</span>' +
+        (r.license ? '<span>📜 ' + escapeHtml(r.license.spdx_id || r.license.key || 'License') + '</span>' : '') +
+      '</div>' +
+      (r.topics && r.topics.length ? '<div class="repo-topics">' + r.topics.map(function(t) { return '<a class="repo-topic" href="https://github.com/topics/' + escapeHtml(t) + '" target="_blank" rel="noopener">' + escapeHtml(t) + '</a>'; }).join('') + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+// === Event handlers ===
 searchBtn.addEventListener('click', function() { doSearch(usernameInput.value); });
 usernameInput.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') doSearch(usernameInput.value);
@@ -310,6 +477,7 @@ $$('.search-hint a').forEach(function(link) {
 });
 
 usernameInput.focus();
+console.log('🐙 GitHub Profile Viewer ready');
 </script>
 </body>
 </html>
