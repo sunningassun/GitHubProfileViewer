@@ -123,6 +123,25 @@ body {
 
 .section-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 14px; }
 
+/* ---- NEW in v4: repo controls ---- */
+.repo-controls {
+  display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
+}
+.repo-search {
+  flex: 1; min-width: 180px; padding: 8px 14px;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text-primary);
+  font-size: 0.88rem; outline: none;
+}
+.repo-search:focus { border-color: var(--accent); }
+.repo-search::placeholder { color: var(--text-secondary); }
+.repo-sort {
+  padding: 8px 12px; background: var(--bg-secondary);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text-primary); font-size: 0.85rem; cursor: pointer; outline: none;
+}
+.repo-count-info { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 10px; }
+
 .repo-list { display: flex; flex-direction: column; gap: 10px; }
 .repo-item {
   background: var(--bg-secondary); border: 1px solid var(--border);
@@ -142,6 +161,20 @@ body {
 }
 .repo-topic:hover { background: rgba(88,166,255,0.25); }
 
+/* ---- NEW in v4: language bar ---- */
+.languages-section { margin-top: 32px; }
+.lang-bar-wrap { margin-bottom: 24px; }
+.lang-bar {
+  display: flex; height: 12px; border-radius: 6px; overflow: hidden;
+  background: var(--bg-tertiary); margin-bottom: 12px;
+}
+.lang-bar-segment { height: 100%; transition: width 0.5s ease; }
+.lang-list { display: flex; flex-wrap: wrap; gap: 14px; }
+.lang-item { display: flex; align-items: center; gap: 6px; font-size: 0.84rem; }
+.lang-item-color { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.lang-item-name { color: var(--text-primary); }
+.lang-item-pct { color: var(--text-secondary); font-size: 0.8rem; }
+
 .footer {
   text-align: center; padding: 32px 0 16px; font-size: 0.8rem;
   color: var(--text-secondary); border-top: 1px solid var(--border); margin-top: 40px;
@@ -158,6 +191,8 @@ body {
   .stat-card-value { font-size: 1.3rem; }
   .search-box { padding: 5px 5px 5px 14px; }
   .search-box button { padding: 8px 16px; font-size: 0.82rem; }
+  .repo-controls { flex-direction: column; }
+  .repo-meta { gap: 8px; }
 }
 </style>
 </head>
@@ -182,6 +217,7 @@ body {
     </div>
   </section>
 
+  <!-- States -->
   <div id="stateInitial" class="state active">
     <div class="state-icon">👆</div>
     <h3>Enter a username to start</h3>
@@ -206,16 +242,38 @@ body {
     <p>This user has no public repos yet</p>
   </div>
 
+  <!-- Dashboard -->
   <div id="dashboard" class="dashboard">
     <div class="rate-limit" id="rateLimit" style="display:none">
       <span class="rate-limit-dot good" id="rateDot"></span>
       <span id="rateText"></span>
     </div>
+
     <div class="profile-card" id="profileCard"></div>
     <div class="stats-grid" id="statsGrid"></div>
+
+    <!-- Repos -->
     <div class="section-title">📦 Repositories</div>
+    <div class="repo-controls">
+      <input type="text" class="repo-search" id="repoSearch" placeholder="Search repos…">
+      <select class="repo-sort" id="repoSort">
+        <option value="stars">⭐ Most Stars</option>
+        <option value="updated">🕐 Recently Updated</option>
+        <option value="name">🔤 Name (A-Z)</option>
+        <option value="forks">🔀 Most Forks</option>
+      </select>
+    </div>
+    <div class="repo-count-info" id="repoCountInfo"></div>
     <div class="repo-list" id="repoList"></div>
-    <div id="languagesSection" style="display:none"></div>
+
+    <!-- Languages -->
+    <div class="languages-section" id="languagesSection" style="display:none">
+      <div class="section-title">🌈 Language Breakdown</div>
+      <div class="lang-bar-wrap">
+        <div class="lang-bar" id="langBar"></div>
+        <div class="lang-list" id="langList"></div>
+      </div>
+    </div>
   </div>
 
   <footer class="footer">
@@ -225,6 +283,7 @@ body {
 </div>
 
 <script>
+// ===== Language Colors =====
 var LANG_COLORS = {
   JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572A5',
   Java: '#b07219', Go: '#00ADD8', Rust: '#dea584', Ruby: '#701516',
@@ -236,6 +295,7 @@ var LANG_COLORS = {
   default: '#8b949e'
 };
 
+// ===== DOM refs =====
 var $ = function(s) { return document.querySelector(s); };
 var $$ = function(s) { return document.querySelectorAll(s); };
 
@@ -255,11 +315,18 @@ var rateText = $('#rateText');
 var profileCard = $('#profileCard');
 var statsGrid = $('#statsGrid');
 var repoList = $('#repoList');
+var repoCountInfo = $('#repoCountInfo');
+var repoSearch = $('#repoSearch');
+var repoSort = $('#repoSort');
+var langBar = $('#langBar');
+var langList = $('#langList');
+var languagesSection = $('#languagesSection');
 
 var currentUsername = '';
 var allRepos = [];
 var rateRemaining = 60;
 
+// ===== Utility functions =====
 function showState(state) {
   [stateInitial, stateLoading, stateError, stateEmpty, dashboard].forEach(function(el) { el.classList.remove('active'); });
   if (state === 'dashboard') {
@@ -293,7 +360,7 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// === API with rate limit tracking ===
+// ===== API with rate limit =====
 function updateRateLimit(headers) {
   var remaining = headers.get('X-RateLimit-Remaining');
   var limit = headers.get('X-RateLimit-Limit');
@@ -324,15 +391,10 @@ function fetchGitHub(url) {
   });
 }
 
-function fetchUser(username) {
-  return fetchGitHub('https://api.github.com/users/' + username);
-}
+function fetchUser(username) { return fetchGitHub('https://api.github.com/users/' + username); }
+function fetchRepos(username) { return fetchGitHub('https://api.github.com/users/' + username + '/repos?per_page=100&sort=updated'); }
 
-function fetchRepos(username) {
-  return fetchGitHub('https://api.github.com/users/' + username + '/repos?per_page=100&sort=updated');
-}
-
-// === Search with comprehensive errors ===
+// ===== Search =====
 function doSearch(username) {
   username = username.trim();
   if (!username) return;
@@ -350,14 +412,8 @@ function doSearch(username) {
   Promise.all([fetchUser(username), fetchRepos(username)]).then(function(results) {
     var user = results[0];
     var repos = results[1];
-
     if (!Array.isArray(repos)) throw new Error('Unexpected API response');
-
-    if (repos.length === 0 && user.public_repos === 0) {
-      showState('empty');
-      return;
-    }
-
+    if (repos.length === 0 && user.public_repos === 0) { showState('empty'); return; }
     allRepos = repos;
     renderDashboard(user, repos);
     showState('dashboard');
@@ -367,14 +423,11 @@ function doSearch(username) {
     if (err.status === 404) {
       showError('User <strong>' + escapeHtml(username) + '</strong> does not exist on GitHub.', 'User Not Found', '🔍');
     } else if (err.status === 403 && rateRemaining === 0) {
-      showError('GitHub API rate limit reached (60 req/hr for unauthenticated requests). Please wait and try again later.', 'Rate Limited', '⏳');
+      showError('GitHub API rate limit reached (60 req/hr). Please wait and try again later.', 'Rate Limited', '⏳');
     } else {
       showError('Request failed: ' + escapeHtml(err.message) + '. Please try again later.', 'Request Failed', '⚠️');
     }
-  }).then(function() {
-    searchBtn.disabled = false;
-    usernameInput.disabled = false;
-  });
+  }).then(function() { searchBtn.disabled = false; usernameInput.disabled = false; });
 }
 
 function showError(msg, title, icon) {
@@ -384,11 +437,12 @@ function showError(msg, title, icon) {
   showState('error');
 }
 
-// === Render ===
+// ===== Render =====
 function renderDashboard(user, repos) {
   renderProfileCard(user);
   renderStatsGrid(user, repos);
   renderRepoList(repos);
+  renderLanguages(repos);
 }
 
 function renderProfileCard(user) {
@@ -397,7 +451,6 @@ function renderProfileCard(user) {
     var url = user.blog.indexOf('http') === 0 ? user.blog : 'https://' + user.blog;
     blogHtml = '<span>🔗 <a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" style="color:var(--text-link);text-decoration:none">' + escapeHtml(user.blog) + '</a></span>';
   }
-
   profileCard.innerHTML =
     '<div class="profile-avatar">' +
       '<img src="' + escapeHtml(user.avatar_url) + '&s=200" alt="' + escapeHtml(user.login) + '" loading="lazy" onerror="this.style.display=\'none\'">' +
@@ -428,7 +481,6 @@ function renderStatsGrid(user, repos) {
   var totalStars = repos.reduce(function(s, r) { return s + r.stargazers_count; }, 0);
   var totalForks = repos.reduce(function(s, r) { return s + r.forks_count; }, 0);
   var accountAge = Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000 / 365.25);
-
   statsGrid.innerHTML =
     '<div class="stat-card"><div class="stat-card-icon">⭐</div><div class="stat-card-value">' + formatNumber(totalStars) + '</div><div class="stat-card-label">Total Stars</div></div>' +
     '<div class="stat-card"><div class="stat-card-icon">📦</div><div class="stat-card-value">' + repos.length + '<span style="font-size:0.7rem;color:var(--text-secondary);font-weight:400">/' + user.public_repos + '</span></div><div class="stat-card-label">Loaded / All Repos</div></div>' +
@@ -436,13 +488,36 @@ function renderStatsGrid(user, repos) {
     '<div class="stat-card"><div class="stat-card-icon">🎂</div><div class="stat-card-value">' + accountAge + '</div><div class="stat-card-label">Years on GitHub</div></div>';
 }
 
+// ===== Repo List with search & sort =====
 function renderRepoList(repos) {
-  if (!repos.length) {
-    repoList.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-secondary)">No repositories found</div>';
+  var searchTerm = repoSearch.value.toLowerCase();
+  var sortBy = repoSort.value;
+
+  var filtered = repos.filter(function(r) {
+    if (!searchTerm) return true;
+    var name = (r.name || '').toLowerCase();
+    var desc = (r.description || '').toLowerCase();
+    var topics = (r.topics || []).join(' ').toLowerCase();
+    var lang = (r.language || '').toLowerCase();
+    return name.indexOf(searchTerm) !== -1 || desc.indexOf(searchTerm) !== -1 || topics.indexOf(searchTerm) !== -1 || lang.indexOf(searchTerm) !== -1;
+  });
+
+  var sortFns = {
+    stars: function(a, b) { return b.stargazers_count - a.stargazers_count; },
+    forks: function(a, b) { return b.forks_count - a.forks_count; },
+    updated: function(a, b) { return new Date(b.updated_at) - new Date(a.updated_at); },
+    name: function(a, b) { return a.name.localeCompare(b.name); }
+  };
+  filtered.sort(sortFns[sortBy] || sortFns.stars);
+
+  repoCountInfo.textContent = filtered.length === repos.length ? 'Showing all ' + repos.length + ' repos' : 'Showing ' + filtered.length + ' of ' + repos.length + ' repos';
+
+  if (filtered.length === 0) {
+    repoList.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-secondary)">No matching repos</div>';
     return;
   }
 
-  repoList.innerHTML = repos.map(function(r) {
+  repoList.innerHTML = filtered.map(function(r) {
     return '<div class="repo-item">' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
         '<a class="repo-name" href="' + escapeHtml(r.html_url) + '" target="_blank" rel="noopener">' + escapeHtml(r.name) + '</a>' +
@@ -463,18 +538,45 @@ function renderRepoList(repos) {
   }).join('');
 }
 
-// === Event handlers ===
-searchBtn.addEventListener('click', function() { doSearch(usernameInput.value); });
-usernameInput.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') doSearch(usernameInput.value);
-});
-$$('.search-hint a').forEach(function(link) {
-  link.addEventListener('click', function(e) {
-    e.preventDefault();
-    usernameInput.value = link.dataset.username;
-    doSearch(link.dataset.username);
+// ===== Language distribution bar =====
+function renderLanguages(repos) {
+  var langCount = {};
+  var totalWithLang = 0;
+  repos.forEach(function(repo) {
+    if (repo.language) { langCount[repo.language] = (langCount[repo.language] || 0) + 1; totalWithLang++; }
   });
+
+  if (totalWithLang === 0) { languagesSection.style.display = 'none'; return; }
+  languagesSection.style.display = 'block';
+
+  var entries = Object.entries(langCount).sort(function(a, b) { return b[1] - a[1]; });
+  var topEntries = entries.slice(0, 10);
+  var topTotal = topEntries.reduce(function(sum, entry) { return sum + entry[1]; }, 0);
+  var hasMore = entries.length > 10;
+
+  langBar.innerHTML = topEntries.map(function(entry) {
+    var lang = entry[0], count = entry[1];
+    var pct = ((count / totalWithLang) * 100).toFixed(1);
+    return '<div class="lang-bar-segment" style="width:' + pct + '%;background:' + (LANG_COLORS[lang] || LANG_COLORS.default) + '" title="' + escapeHtml(lang) + ': ' + pct + '%"></div>';
+  }).join('') + (hasMore ? '<div class="lang-bar-segment" style="width:' + (((totalWithLang - topTotal) / totalWithLang) * 100).toFixed(1) + '%;background:var(--text-secondary)" title="Other ' + (entries.length - 10) + ' languages"></div>' : '');
+
+  langList.innerHTML = entries.map(function(entry) {
+    var lang = entry[0], count = entry[1];
+    var pct = ((count / totalWithLang) * 100).toFixed(1);
+    return '<div class="lang-item"><span class="lang-item-color" style="background:' + (LANG_COLORS[lang] || LANG_COLORS.default) + '"></span><span class="lang-item-name">' + escapeHtml(lang) + '</span><span class="lang-item-pct">' + pct + '%</span></div>';
+  }).join('');
+}
+
+// ===== Event handlers =====
+searchBtn.addEventListener('click', function() { doSearch(usernameInput.value); });
+usernameInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') doSearch(usernameInput.value); });
+$$('.search-hint a').forEach(function(link) {
+  link.addEventListener('click', function(e) { e.preventDefault(); usernameInput.value = link.dataset.username; doSearch(link.dataset.username); });
 });
+
+var searchTimeout;
+repoSearch.addEventListener('input', function() { clearTimeout(searchTimeout); searchTimeout = setTimeout(function() { renderRepoList(allRepos); }, 250); });
+repoSort.addEventListener('change', function() { renderRepoList(allRepos); });
 
 usernameInput.focus();
 console.log('🐙 GitHub Profile Viewer ready');
