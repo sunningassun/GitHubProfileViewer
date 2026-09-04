@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目复盘：GitHub用户资料查看器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: "Microsoft Yahei", system-ui, sans-serif;
+            line-height: 1.75;
+            color: #222;
+            background-color: #f8f9fa;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: #111;
+        }
+        .tip {
+            color:#777;
+            margin-bottom:30px;
+            border-left:4px solid #4285f4;
+            padding-left:14px;
+        }
+        h2 {
+            font-size: 20px;
+            margin: 32px 0 14px;
+            color:#2c3e50;
+        }
+        p {
+            margin-bottom:16px;
+            font-size:16px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>从零开发GitHub用户资料查看器</h1>
+
+    <p>最近写了个GitHubProfileViewer，功能很简单：输入用户名，拉取公开资料、仓库列表，顺带生成编程语言分布图。纯前端单页，HTML/CSS/JS搞定，零依赖，部署到Vercel就能跑。</p>
+
+    <p>接口直接用GitHubRESTAPI，直接就能用，国内直连速度还行。整个代码600多行，套了GitHub的暗色主题，做了4维统计面板，仓库列表支持搜索和排序，语言占比用纯CSS柱状图展示，还加了个API速率指示灯，看着绿色就觉得舒坦。</p>
+    <p>用AI写样式最省力。暗色配色体系、卡片的玻璃拟态、响应式断点 —— 直接描述需求，AI生成初稿，我微调几个间距就拿来用了。手写CSS估摸要两小时，这边20分钟收工。JS的错误处理也是AI给的比较全，比如404提示用户不存在、403且剩余请求数为 0 时提示限流、网络挂掉提示网络错误，这种多层判断 + 文案的活，我写多半漏分支，AI写的还得挺全。</p>
+    <p>AI挖的最大一个坑是写HTML时，代码里所有$('#id') 被Shell当成变量展开成空字符串，整段JS直接报废。AI写完没验证就告诉我 “代码已生成”，我打开页面发现完全没交互，排查了15分钟才发现是双引号here-string的变量展开特性导致的，后来换成单引号或直接绕过Shell写文件才解决。</p>
+
+    <p>这六百多行代码里，真正自己动手敲的核心逻辑也就三四成，剩下都是靠AI补全、润色、查漏，AI还是太好用了。</p>
+
+</div>
+</body>
+</html>
