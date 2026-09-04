@@ -91,7 +91,6 @@ That's it. The page calls the GitHub REST API directly from your browser — no 
 
 ```
 little-tool/
-├── blog.html
 ├── index.html    # The entire application (HTML + CSS + JS in one file)
 ├── README.md     # This file
 ```
