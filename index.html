@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GitHub Profile Viewer</title>
 <style>
+/* ===== Reset & Variables ===== */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
 :root {
@@ -33,12 +34,15 @@ body {
   line-height: 1.6;
   min-height: 100vh;
 }
+
 .container { max-width: 960px; margin: 0 auto; padding: 24px 20px 60px; }
 
+/* Header */
 .header { text-align: center; padding: 36px 0 28px; }
 .header h1 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.02em; }
 .header p { color: var(--text-secondary); font-size: 0.95rem; margin-top: 4px; }
 
+/* Search */
 .search-section { margin-bottom: 32px; }
 .search-box {
   display: flex; gap: 10px; max-width: 520px; margin: 0 auto;
@@ -47,7 +51,8 @@ body {
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 .search-box:focus-within {
-  border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
 .search-box input {
   flex: 1; background: none; border: none; outline: none;
@@ -63,15 +68,20 @@ body {
 .search-box button:hover { background: #4090e0; }
 .search-box button:active { transform: scale(0.97); }
 .search-box button:disabled { opacity: 0.5; cursor: not-allowed; }
-.search-hint { text-align: center; margin-top: 10px; font-size: 0.82rem; color: var(--text-secondary); }
+
+.search-hint {
+  text-align: center; margin-top: 10px; font-size: 0.82rem; color: var(--text-secondary);
+}
 .search-hint a { color: var(--text-link); text-decoration: none; }
 .search-hint a:hover { text-decoration: underline; }
 
+/* States */
 .state { display: none; text-align: center; padding: 48px 20px; }
 .state.active { display: block; }
 .state-icon { font-size: 3rem; margin-bottom: 12px; }
 .state h3 { font-size: 1.2rem; margin-bottom: 6px; }
 .state p { color: var(--text-secondary); font-size: 0.9rem; max-width: 400px; margin: 0 auto; }
+
 .spinner {
   width: 40px; height: 40px; margin: 0 auto 16px;
   border: 3px solid var(--border); border-top-color: var(--accent);
@@ -79,9 +89,15 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Dashboard */
 .dashboard { display: none; }
-.dashboard.active { display: block; }
+.dashboard.active { display: block; animation: fadeSlideIn 0.4s ease; }
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
+/* Rate limit bar */
 .rate-limit {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 20px;
@@ -93,6 +109,7 @@ body {
 .rate-limit-dot.warn { background: var(--orange); }
 .rate-limit-dot.low { background: var(--red); }
 
+/* Profile Card */
 .profile-card {
   display: flex; gap: 24px; align-items: flex-start;
   background: var(--bg-secondary); border: 1px solid var(--border);
@@ -112,18 +129,22 @@ body {
 .profile-stat strong { color: var(--text-primary); font-weight: 600; }
 .profile-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-size: 0.82rem; color: var(--text-secondary); }
 
+/* Stats Grid */
 .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
 .stat-card {
   background: var(--bg-secondary); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 18px 16px; text-align: center;
+  transition: transform var(--transition), border-color var(--transition);
 }
+.stat-card:hover { transform: translateY(-2px); border-color: var(--accent); }
 .stat-card-icon { font-size: 1.5rem; margin-bottom: 4px; }
 .stat-card-value { font-size: 1.6rem; font-weight: 700; }
 .stat-card-label { font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; }
 
+/* Section Title */
 .section-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 14px; }
 
-/* ---- NEW in v4: repo controls ---- */
+/* Repo Controls */
 .repo-controls {
   display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
 }
@@ -142,13 +163,14 @@ body {
 }
 .repo-count-info { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 10px; }
 
+/* Repo List */
 .repo-list { display: flex; flex-direction: column; gap: 10px; }
 .repo-item {
   background: var(--bg-secondary); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 16px 18px;
   transition: border-color var(--transition);
 }
-.repo-item:hover { border-color: var(--accent); }
+.repo-item:hover { border-color: var(--accent); transform: translateX(3px); }
 .repo-name { font-size: 0.95rem; font-weight: 600; color: var(--text-link); text-decoration: none; }
 .repo-name:hover { text-decoration: underline; }
 .repo-desc { margin-top: 6px; font-size: 0.84rem; color: var(--text-secondary); overflow-wrap: break-word; }
@@ -161,7 +183,7 @@ body {
 }
 .repo-topic:hover { background: rgba(88,166,255,0.25); }
 
-/* ---- NEW in v4: language bar ---- */
+/* Languages Bar */
 .languages-section { margin-top: 32px; }
 .lang-bar-wrap { margin-bottom: 24px; }
 .lang-bar {
@@ -175,12 +197,14 @@ body {
 .lang-item-name { color: var(--text-primary); }
 .lang-item-pct { color: var(--text-secondary); font-size: 0.8rem; }
 
+/* Footer */
 .footer {
   text-align: center; padding: 32px 0 16px; font-size: 0.8rem;
   color: var(--text-secondary); border-top: 1px solid var(--border); margin-top: 40px;
 }
 .footer a { color: var(--text-link); text-decoration: none; }
 
+/* Responsive */
 @media (max-width: 640px) {
   .container { padding: 16px 14px 40px; }
   .header h1 { font-size: 1.4rem; }
@@ -244,12 +268,16 @@ body {
 
   <!-- Dashboard -->
   <div id="dashboard" class="dashboard">
+    <!-- Rate limit -->
     <div class="rate-limit" id="rateLimit" style="display:none">
       <span class="rate-limit-dot good" id="rateDot"></span>
       <span id="rateText"></span>
     </div>
 
+    <!-- Profile Card -->
     <div class="profile-card" id="profileCard"></div>
+
+    <!-- Stats Grid -->
     <div class="stats-grid" id="statsGrid"></div>
 
     <!-- Repos -->
@@ -277,7 +305,7 @@ body {
   </div>
 
   <footer class="footer">
-    <p>Data from <a href="https://docs.github.com/en/rest" target="_blank" rel="noopener">GitHub REST API</a> (no auth, 60 req/hr) · Rate limit status shown after each search</p>
+    <p>Data from <a href="https://docs.github.com/en/rest" target="_blank" rel="noopener">GitHub REST API</a> (no auth, 60 req/hr)</p>
     <p>Built with ❤️ · 2025</p>
   </footer>
 </div>
@@ -328,7 +356,9 @@ var rateRemaining = 60;
 
 // ===== Utility functions =====
 function showState(state) {
-  [stateInitial, stateLoading, stateError, stateEmpty, dashboard].forEach(function(el) { el.classList.remove('active'); });
+  [stateInitial, stateLoading, stateError, stateEmpty, dashboard].forEach(function(el) {
+    el.classList.remove('active');
+  });
   if (state === 'dashboard') {
     dashboard.classList.add('active');
   } else {
@@ -360,7 +390,7 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// ===== API with rate limit =====
+// ===== API handling with rate limit tracking =====
 function updateRateLimit(headers) {
   var remaining = headers.get('X-RateLimit-Remaining');
   var limit = headers.get('X-RateLimit-Limit');
@@ -371,6 +401,7 @@ function updateRateLimit(headers) {
     var resetStr = resetDate ? resetDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '?';
     rateLimit.style.display = 'flex';
     rateText.textContent = 'API: ' + remaining + '/' + limit + ' remaining · resets at ' + resetStr;
+
     rateDot.classList.remove('good', 'warn', 'low');
     if (rateRemaining > 20) rateDot.classList.add('good');
     else if (rateRemaining > 5) rateDot.classList.add('warn');
@@ -391,10 +422,15 @@ function fetchGitHub(url) {
   });
 }
 
-function fetchUser(username) { return fetchGitHub('https://api.github.com/users/' + username); }
-function fetchRepos(username) { return fetchGitHub('https://api.github.com/users/' + username + '/repos?per_page=100&sort=updated'); }
+function fetchUser(username) {
+  return fetchGitHub('https://api.github.com/users/' + username);
+}
 
-// ===== Search =====
+function fetchRepos(username) {
+  return fetchGitHub('https://api.github.com/users/' + username + '/repos?per_page=100&sort=updated');
+}
+
+// ===== Search handler =====
 function doSearch(username) {
   username = username.trim();
   if (!username) return;
@@ -412,8 +448,14 @@ function doSearch(username) {
   Promise.all([fetchUser(username), fetchRepos(username)]).then(function(results) {
     var user = results[0];
     var repos = results[1];
+
     if (!Array.isArray(repos)) throw new Error('Unexpected API response');
-    if (repos.length === 0 && user.public_repos === 0) { showState('empty'); return; }
+
+    if (repos.length === 0 && user.public_repos === 0) {
+      showState('empty');
+      return;
+    }
+
     allRepos = repos;
     renderDashboard(user, repos);
     showState('dashboard');
@@ -423,11 +465,14 @@ function doSearch(username) {
     if (err.status === 404) {
       showError('User <strong>' + escapeHtml(username) + '</strong> does not exist on GitHub.', 'User Not Found', '🔍');
     } else if (err.status === 403 && rateRemaining === 0) {
-      showError('GitHub API rate limit reached (60 req/hr). Please wait and try again later.', 'Rate Limited', '⏳');
+      showError('GitHub API rate limit reached (60 req/hr for unauthenticated requests). Please wait and try again later.', 'Rate Limited', '⏳');
     } else {
       showError('Request failed: ' + escapeHtml(err.message) + '. Please try again later.', 'Request Failed', '⚠️');
     }
-  }).then(function() { searchBtn.disabled = false; usernameInput.disabled = false; });
+  }).then(function() {
+    searchBtn.disabled = false;
+    usernameInput.disabled = false;
+  });
 }
 
 function showError(msg, title, icon) {
@@ -451,6 +496,7 @@ function renderProfileCard(user) {
     var url = user.blog.indexOf('http') === 0 ? user.blog : 'https://' + user.blog;
     blogHtml = '<span>🔗 <a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" style="color:var(--text-link);text-decoration:none">' + escapeHtml(user.blog) + '</a></span>';
   }
+
   profileCard.innerHTML =
     '<div class="profile-avatar">' +
       '<img src="' + escapeHtml(user.avatar_url) + '&s=200" alt="' + escapeHtml(user.login) + '" loading="lazy" onerror="this.style.display=\'none\'">' +
@@ -480,7 +526,9 @@ function renderProfileCard(user) {
 function renderStatsGrid(user, repos) {
   var totalStars = repos.reduce(function(s, r) { return s + r.stargazers_count; }, 0);
   var totalForks = repos.reduce(function(s, r) { return s + r.forks_count; }, 0);
+  var languages = new Set(repos.filter(function(r) { return r.language; }).map(function(r) { return r.language; }));
   var accountAge = Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000 / 365.25);
+
   statsGrid.innerHTML =
     '<div class="stat-card"><div class="stat-card-icon">⭐</div><div class="stat-card-value">' + formatNumber(totalStars) + '</div><div class="stat-card-label">Total Stars</div></div>' +
     '<div class="stat-card"><div class="stat-card-icon">📦</div><div class="stat-card-value">' + repos.length + '<span style="font-size:0.7rem;color:var(--text-secondary);font-weight:400">/' + user.public_repos + '</span></div><div class="stat-card-label">Loaded / All Repos</div></div>' +
@@ -510,7 +558,9 @@ function renderRepoList(repos) {
   };
   filtered.sort(sortFns[sortBy] || sortFns.stars);
 
-  repoCountInfo.textContent = filtered.length === repos.length ? 'Showing all ' + repos.length + ' repos' : 'Showing ' + filtered.length + ' of ' + repos.length + ' repos';
+  repoCountInfo.textContent = filtered.length === repos.length
+    ? 'Showing all ' + repos.length + ' repos'
+    : 'Showing ' + filtered.length + ' of ' + repos.length + ' repos';
 
   if (filtered.length === 0) {
     repoList.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-secondary)">No matching repos</div>';
@@ -542,14 +592,23 @@ function renderRepoList(repos) {
 function renderLanguages(repos) {
   var langCount = {};
   var totalWithLang = 0;
+
   repos.forEach(function(repo) {
-    if (repo.language) { langCount[repo.language] = (langCount[repo.language] || 0) + 1; totalWithLang++; }
+    if (repo.language) {
+      langCount[repo.language] = (langCount[repo.language] || 0) + 1;
+      totalWithLang++;
+    }
   });
 
-  if (totalWithLang === 0) { languagesSection.style.display = 'none'; return; }
-  languagesSection.style.display = 'block';
+  if (totalWithLang === 0) {
+    languagesSection.style.display = 'none';
+    return;
+  }
 
+  languagesSection.style.display = 'block';
   var entries = Object.entries(langCount).sort(function(a, b) { return b[1] - a[1]; });
+
+  // Top 10 languages for the bar + optional "Other" segment
   var topEntries = entries.slice(0, 10);
   var topTotal = topEntries.reduce(function(sum, entry) { return sum + entry[1]; }, 0);
   var hasMore = entries.length > 10;
@@ -569,17 +628,45 @@ function renderLanguages(repos) {
 
 // ===== Event handlers =====
 searchBtn.addEventListener('click', function() { doSearch(usernameInput.value); });
-usernameInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') doSearch(usernameInput.value); });
-$$('.search-hint a').forEach(function(link) {
-  link.addEventListener('click', function(e) { e.preventDefault(); usernameInput.value = link.dataset.username; doSearch(link.dataset.username); });
+usernameInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doSearch(usernameInput.value);
 });
 
+$$('.search-hint a').forEach(function(link) {
+  link.addEventListener('click', function(e) {
+    e.preventDefault();
+    var username = link.dataset.username;
+    usernameInput.value = username;
+    doSearch(username);
+  });
+});
+
+// Repo search (debounced) & sort
 var searchTimeout;
-repoSearch.addEventListener('input', function() { clearTimeout(searchTimeout); searchTimeout = setTimeout(function() { renderRepoList(allRepos); }, 250); });
+repoSearch.addEventListener('input', function() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(function() { renderRepoList(allRepos); }, 250);
+});
 repoSort.addEventListener('change', function() { renderRepoList(allRepos); });
 
-usernameInput.focus();
-console.log('🐙 GitHub Profile Viewer ready');
+// ===== Keyboard Shortcuts =====
+document.addEventListener('keydown', function(e) {
+  // Press "/" to focus search (except when typing in an input)
+  if (e.key === '/' && document.activeElement !== usernameInput && document.activeElement !== repoSearch) {
+    e.preventDefault();
+    usernameInput.focus();
+    usernameInput.select();
+  }
+  // Press Escape to blur search
+  if (e.key === 'Escape' && document.activeElement === usernameInput) {
+    usernameInput.blur();
+  }
+});
+
+// ===== Init =====
+setTimeout(function() { usernameInput.focus(); }, 100);
+console.log('🐙 GitHub Profile Viewer ready — press / to search');
 </script>
+
 </body>
 </html>
