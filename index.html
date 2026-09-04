@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub Profile Viewer</title>
+</head>
+<body>
+
+<div class="container">
+  <header class="header">
+    <h1>🐙 GitHub Profile Viewer</h1>
+    <p>Enter a GitHub username to explore developer profiles and repos</p>
+  </header>
+
+  <section class="search-section">
+    <div class="search-box">
+      <input type="text" id="usernameInput" placeholder="Enter GitHub username, e.g. torvalds...">
+      <button id="searchBtn" type="button">Search</button>
+    </div>
+    <div class="search-hint">
+      Try torvalds · yyx990803 · DIYgod · ruanyf
+    </div>
+  </section>
+
+  <div id="stateInitial" class="state">
+    <p>👆 Enter a username to start exploring</p>
+  </div>
+
+  <div id="stateLoading" class="state" style="display:none">
+    <p>⏳ Loading data...</p>
+  </div>
+
+  <div id="stateError" class="state" style="display:none">
+    <p id="errorMsg"></p>
+  </div>
+
+  <div id="dashboard" style="display:none">
+    <div id="profileCard"></div>
+    <div id="statsGrid"></div>
+    <div id="repoList"></div>
+  </div>
+
+  <footer>
+    <p>Data from GitHub REST API (no auth, 60 req/hr)</p>
+  </footer>
+</div>
+
+<script>
+var $ = function(s) { return document.querySelector(s); };
+
+async function doSearch(username) {
+  username = username.trim();
+  if (!username) return;
+
+  $('#stateInitial').style.display = 'none';
+  $('#stateError').style.display = 'none';
+  $('#dashboard').style.display = 'none';
+  $('#stateLoading').style.display = 'block';
+
+  try {
+    var userResp = await fetch('https://api.github.com/users/' + username);
+    var user = await userResp.json();
+    var reposResp = await fetch('https://api.github.com/users/' + username + '/repos?per_page=100&sort=updated');
+    var repos = await reposResp.json();
+
+    $('#stateLoading').style.display = 'none';
+    $('#dashboard').style.display = 'block';
+
+    $('#profileCard').innerHTML =
+      '<img src="' + user.avatar_url + '&s=96" alt="' + user.login + '">' +
+      '<h2>' + (user.name || user.login) + ' (@' + user.login + ')</h2>' +
+      '<p>' + (user.bio || '') + '</p>' +
+      '<p>' + user.public_repos + ' repos · ' + user.followers + ' followers · ' + user.following + ' following</p>';
+
+    var totalStars = repos.reduce(function(s, r) { return s + r.stargazers_count; }, 0);
+    $('#statsGrid').innerHTML =
+      '<div>⭐ ' + totalStars + ' Stars</div>' +
+      '<div>📦 ' + repos.length + ' Repos</div>';
+
+    $('#repoList').innerHTML = repos.slice(0, 30).map(function(r) {
+      return '<div>' +
+        '<a href="' + r.html_url + '" target="_blank">' + r.name + '</a>' +
+        (r.language ? ' · ' + r.language : '') +
+        ' · ⭐' + r.stargazers_count +
+        '<p>' + (r.description || '') + '</p>' +
+        '</div>';
+    }).join('');
+  } catch (err) {
+    $('#stateLoading').style.display = 'none';
+    $('#stateError').style.display = 'block';
+    $('#errorMsg').textContent = 'Request failed: ' + err.message;
+  }
+}
+
+$('#searchBtn').addEventListener('click', function() { doSearch($('#usernameInput').value); });
+$('#usernameInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doSearch($('#usernameInput').value);
+});
+</script>
+
+</body>
+</html>
