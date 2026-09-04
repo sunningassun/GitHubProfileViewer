@@ -4,100 +4,312 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GitHub Profile Viewer</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --border: #30363d;
+  --text-primary: #c9d1d9;
+  --text-secondary: #8b949e;
+  --text-link: #58a6ff;
+  --accent: #58a6ff;
+  --accent-dim: rgba(88,166,255,0.15);
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --transition: 0.2s ease;
+}
+
+html { font-size: 16px; scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 24px 20px 60px; }
+
+.header { text-align: center; padding: 36px 0 28px; }
+.header h1 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.02em; }
+.header p { color: var(--text-secondary); font-size: 0.95rem; margin-top: 4px; }
+
+.search-section { margin-bottom: 32px; }
+.search-box {
+  display: flex; gap: 10px; max-width: 520px; margin: 0 auto;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: 50px; padding: 6px 6px 6px 20px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.search-box:focus-within {
+  border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.search-box input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text-primary); font-size: 0.95rem; min-width: 0;
+}
+.search-box input::placeholder { color: var(--text-secondary); }
+.search-box button {
+  background: var(--accent); color: #fff; border: none;
+  padding: 10px 22px; border-radius: 50px; font-size: 0.9rem;
+  font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: background var(--transition), transform var(--transition);
+}
+.search-box button:hover { background: #4090e0; }
+.search-box button:active { transform: scale(0.97); }
+.search-box button:disabled { opacity: 0.5; cursor: not-allowed; }
+.search-hint { text-align: center; margin-top: 10px; font-size: 0.82rem; color: var(--text-secondary); }
+.search-hint a { color: var(--text-link); text-decoration: none; }
+.search-hint a:hover { text-decoration: underline; }
+
+.state { display: none; text-align: center; padding: 48px 20px; }
+.state.active { display: block; }
+.state-icon { font-size: 3rem; margin-bottom: 12px; }
+.state h3 { font-size: 1.2rem; margin-bottom: 6px; }
+.state p { color: var(--text-secondary); font-size: 0.9rem; max-width: 400px; margin: 0 auto; }
+.spinner {
+  width: 40px; height: 40px; margin: 0 auto 16px;
+  border: 3px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.dashboard { display: none; }
+.dashboard.active { display: block; }
+
+.profile-card {
+  display: flex; gap: 24px; align-items: flex-start;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 28px; margin-bottom: 28px;
+}
+.profile-avatar {
+  flex-shrink: 0; width: 96px; height: 96px; border-radius: 50%;
+  border: 3px solid var(--border); overflow: hidden;
+}
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-info { flex: 1; min-width: 0; }
+.profile-name span:first-child { font-size: 1.5rem; font-weight: 700; }
+.profile-login { color: var(--text-secondary); font-size: 1.1rem; }
+.profile-bio { margin-top: 8px; color: var(--text-secondary); font-size: 0.9rem; }
+.profile-stats { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; }
+.profile-stat { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; color: var(--text-secondary); }
+.profile-stat strong { color: var(--text-primary); font-weight: 600; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 16px; text-align: center;
+}
+.stat-card-icon { font-size: 1.5rem; margin-bottom: 4px; }
+.stat-card-value { font-size: 1.6rem; font-weight: 700; }
+.stat-card-label { font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; }
+
+.repo-list { display: flex; flex-direction: column; gap: 10px; }
+.repo-item {
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px;
+  transition: border-color var(--transition);
+}
+.repo-item:hover { border-color: var(--accent); }
+.repo-name { font-size: 0.95rem; font-weight: 600; color: var(--text-link); text-decoration: none; }
+.repo-name:hover { text-decoration: underline; }
+.repo-desc { margin-top: 6px; font-size: 0.84rem; color: var(--text-secondary); }
+.repo-meta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 0.78rem; color: var(--text-secondary); }
+.repo-lang-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+.footer {
+  text-align: center; padding: 32px 0 16px; font-size: 0.8rem;
+  color: var(--text-secondary); border-top: 1px solid var(--border); margin-top: 40px;
+}
+.footer a { color: var(--text-link); text-decoration: none; }
+
+@media (max-width: 640px) {
+  .container { padding: 16px 14px 40px; }
+  .header h1 { font-size: 1.4rem; }
+  .profile-card { flex-direction: column; align-items: center; text-align: center; padding: 20px; }
+  .profile-stats { justify-content: center; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat-card { padding: 14px 10px; }
+  .stat-card-value { font-size: 1.3rem; }
+}
+</style>
 </head>
 <body>
-
 <div class="container">
   <header class="header">
     <h1>🐙 GitHub Profile Viewer</h1>
-    <p>Enter a GitHub username to explore developer profiles and repos</p>
+    <p>Enter a GitHub username to explore developer profiles, repos, and language stats</p>
   </header>
 
   <section class="search-section">
     <div class="search-box">
-      <input type="text" id="usernameInput" placeholder="Enter GitHub username, e.g. torvalds...">
-      <button id="searchBtn" type="button">Search</button>
+      <input type="text" id="usernameInput" placeholder="Enter GitHub username, e.g. torvalds..." autocomplete="off">
+      <button id="searchBtn" type="button">🔍 Search</button>
     </div>
     <div class="search-hint">
-      Try torvalds · yyx990803 · DIYgod · ruanyf
+      Try <a href="#" data-username="torvalds">torvalds</a> ·
+      <a href="#" data-username="yyx990803">yyx990803</a> ·
+      <a href="#" data-username="DIYgod">DIYgod</a> ·
+      <a href="#" data-username="ruanyf">ruanyf</a>
     </div>
   </section>
 
-  <div id="stateInitial" class="state">
-    <p>👆 Enter a username to start exploring</p>
+  <div id="stateInitial" class="state active">
+    <div class="state-icon">👆</div>
+    <h3>Enter a username to start</h3>
+    <p>View any GitHub user's public profile, repositories, and language breakdown</p>
   </div>
-
-  <div id="stateLoading" class="state" style="display:none">
-    <p>⏳ Loading data...</p>
+  <div id="stateLoading" class="state">
+    <div class="spinner"></div>
+    <h3>Loading data...</h3>
+    <p>Fetching from GitHub REST API</p>
   </div>
-
-  <div id="stateError" class="state" style="display:none">
+  <div id="stateError" class="state">
+    <div class="state-icon">⚠️</div>
+    <h3 id="errorTitle">Error</h3>
     <p id="errorMsg"></p>
   </div>
 
-  <div id="dashboard" style="display:none">
-    <div id="profileCard"></div>
-    <div id="statsGrid"></div>
-    <div id="repoList"></div>
+  <div id="dashboard" class="dashboard">
+    <div class="profile-card" id="profileCard"></div>
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="repo-list" id="repoList"></div>
   </div>
 
-  <footer>
-    <p>Data from GitHub REST API (no auth, 60 req/hr)</p>
+  <footer class="footer">
+    <p>Data from <a href="https://docs.github.com/en/rest" target="_blank" rel="noopener">GitHub REST API</a> (no auth, 60 req/hr)</p>
+    <p>Built with ❤️ · 2025</p>
   </footer>
 </div>
 
 <script>
 var $ = function(s) { return document.querySelector(s); };
+var $$ = function(s) { return document.querySelectorAll(s); };
+
+var usernameInput = $('#usernameInput');
+var searchBtn = $('#searchBtn');
+var stateInitial = $('#stateInitial');
+var stateLoading = $('#stateLoading');
+var stateError = $('#stateError');
+var errorTitle = $('#errorTitle');
+var errorMsg = $('#errorMsg');
+var dashboard = $('#dashboard');
+var profileCard = $('#profileCard');
+var statsGrid = $('#statsGrid');
+var repoList = $('#repoList');
+
+var LANG_COLORS = {
+  JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572A5',
+  Java: '#b07219', Go: '#00ADD8', Rust: '#dea584', Ruby: '#701516',
+  'C++': '#f34b7d', C: '#555555', 'C#': '#178600', PHP: '#4F5D95',
+  Swift: '#F05138', Kotlin: '#A97BFF', Dart: '#00B4AB',
+  HTML: '#e34c26', CSS: '#563d7c', Vue: '#41b883',
+  Shell: '#89e051', Jupyter: '#DA5B0B', R: '#198CE7',
+  default: '#8b949e'
+};
+
+function showState(state) {
+  [stateInitial, stateLoading, stateError, dashboard].forEach(function(el) { el.classList.remove('active'); });
+  var target = document.getElementById(state === 'dashboard' ? 'dashboard' : 'state' + state.charAt(0).toUpperCase() + state.slice(1));
+  target.classList.add('active');
+}
+
+function formatNumber(n) {
+  if (n === undefined || n === null) return '—';
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+  return n.toString();
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
 
 async function doSearch(username) {
   username = username.trim();
   if (!username) return;
 
-  $('#stateInitial').style.display = 'none';
-  $('#stateError').style.display = 'none';
-  $('#dashboard').style.display = 'none';
-  $('#stateLoading').style.display = 'block';
+  dashboard.classList.remove('active');
+  showState('loading');
+  searchBtn.disabled = true;
+  usernameInput.disabled = true;
 
   try {
     var userResp = await fetch('https://api.github.com/users/' + username);
+    if (!userResp.ok) throw new Error('HTTP ' + userResp.status);
     var user = await userResp.json();
+
     var reposResp = await fetch('https://api.github.com/users/' + username + '/repos?per_page=100&sort=updated');
+    if (!reposResp.ok) throw new Error('HTTP ' + reposResp.status);
     var repos = await reposResp.json();
 
-    $('#stateLoading').style.display = 'none';
-    $('#dashboard').style.display = 'block';
+    if (!Array.isArray(repos)) throw new Error('Invalid response');
 
-    $('#profileCard').innerHTML =
-      '<img src="' + user.avatar_url + '&s=96" alt="' + user.login + '">' +
-      '<h2>' + (user.name || user.login) + ' (@' + user.login + ')</h2>' +
-      '<p>' + (user.bio || '') + '</p>' +
-      '<p>' + user.public_repos + ' repos · ' + user.followers + ' followers · ' + user.following + ' following</p>';
+    profileCard.innerHTML =
+      '<div class="profile-avatar"><img src="' + escapeHtml(user.avatar_url) + '&s=200" alt="' + escapeHtml(user.login) + '" loading="lazy"></div>' +
+      '<div class="profile-info">' +
+        '<div class="profile-name"><span>' + escapeHtml(user.name || user.login) + '</span> <span class="profile-login">@' + escapeHtml(user.login) + '</span></div>' +
+        (user.bio ? '<div class="profile-bio">' + escapeHtml(user.bio) + '</div>' : '') +
+        '<div class="profile-stats">' +
+          '<span class="profile-stat"><strong>' + formatNumber(user.public_repos) + '</strong> repos</span>' +
+          '<span class="profile-stat"><strong>' + formatNumber(user.followers) + '</strong> followers</span>' +
+          '<span class="profile-stat"><strong>' + formatNumber(user.following) + '</strong> following</span>' +
+        '</div>' +
+      '</div>';
 
     var totalStars = repos.reduce(function(s, r) { return s + r.stargazers_count; }, 0);
-    $('#statsGrid').innerHTML =
-      '<div>⭐ ' + totalStars + ' Stars</div>' +
-      '<div>📦 ' + repos.length + ' Repos</div>';
+    var langs = new Set(repos.filter(function(r) { return r.language; }).map(function(r) { return r.language; }));
+    statsGrid.innerHTML =
+      '<div class="stat-card"><div class="stat-card-icon">⭐</div><div class="stat-card-value">' + formatNumber(totalStars) + '</div><div class="stat-card-label">Total Stars</div></div>' +
+      '<div class="stat-card"><div class="stat-card-icon">📦</div><div class="stat-card-value">' + repos.length + '</div><div class="stat-card-label">Repos Loaded</div></div>' +
+      '<div class="stat-card"><div class="stat-card-icon">🔀</div><div class="stat-card-value">' + formatNumber(repos.reduce(function(s, r) { return s + r.forks_count; }, 0)) + '</div><div class="stat-card-label">Total Forks</div></div>' +
+      '<div class="stat-card"><div class="stat-card-icon">🌈</div><div class="stat-card-value">' + langs.size + '</div><div class="stat-card-label">Languages</div></div>';
 
-    $('#repoList').innerHTML = repos.slice(0, 30).map(function(r) {
-      return '<div>' +
-        '<a href="' + r.html_url + '" target="_blank">' + r.name + '</a>' +
-        (r.language ? ' · ' + r.language : '') +
-        ' · ⭐' + r.stargazers_count +
-        '<p>' + (r.description || '') + '</p>' +
-        '</div>';
+    repoList.innerHTML = repos.map(function(r) {
+      return '<div class="repo-item">' +
+        '<a class="repo-name" href="' + escapeHtml(r.html_url) + '" target="_blank" rel="noopener">' + escapeHtml(r.name) + '</a>' +
+        (r.description ? '<div class="repo-desc">' + escapeHtml(r.description) + '</div>' : '') +
+        '<div class="repo-meta">' +
+          (r.language ? '<span><span class="repo-lang-dot" style="background:' + (LANG_COLORS[r.language] || LANG_COLORS.default) + '"></span> ' + escapeHtml(r.language) + '</span>' : '') +
+          '<span>⭐ ' + formatNumber(r.stargazers_count) + '</span>' +
+          '<span>🔀 ' + formatNumber(r.forks_count) + '</span>' +
+          '<span>Updated ' + new Date(r.updated_at).toLocaleDateString() + '</span>' +
+        '</div>' +
+      '</div>';
     }).join('');
+
+    showState('dashboard');
+    dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
-    $('#stateLoading').style.display = 'none';
-    $('#stateError').style.display = 'block';
-    $('#errorMsg').textContent = 'Request failed: ' + err.message;
+    errorTitle.textContent = err.message.indexOf('404') !== -1 ? 'User not found' : 'Request failed';
+    errorMsg.textContent = err.message;
+    showState('error');
+  } finally {
+    searchBtn.disabled = false;
+    usernameInput.disabled = false;
   }
 }
 
-$('#searchBtn').addEventListener('click', function() { doSearch($('#usernameInput').value); });
-$('#usernameInput').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') doSearch($('#usernameInput').value);
+searchBtn.addEventListener('click', function() { doSearch(usernameInput.value); });
+usernameInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doSearch(usernameInput.value);
 });
-</script>
+$$('.search-hint a').forEach(function(link) {
+  link.addEventListener('click', function(e) {
+    e.preventDefault();
+    usernameInput.value = link.dataset.username;
+    doSearch(link.dataset.username);
+  });
+});
 
+usernameInput.focus();
+</script>
 </body>
 </html>
